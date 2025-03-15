@@ -1,0 +1,124 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>WhatsApp Web - Recordatorios</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-gray-100 p-4">
+
+  <!-- Barra de notificación de estado -->
+  <div id="status" class="p-4 mb-4 text-white bg-blue-500 rounded-md">
+    Conectando...
+  </div>
+
+  <!-- Mostrar QR para escanear -->
+  <div id="qrContainer" class="text-center mb-6">
+    <h3 class="text-lg font-medium mb-4">Escanea el código QR para iniciar sesión</h3>
+    <img id="qrCode" src="" alt="QR" class="mx-auto" style="max-width: 200px;">
+  </div>
+
+  <!-- Formulario de entrada -->
+  <div class="max-w-lg mx-auto bg-white p-6 rounded-lg shadow-lg">
+    <h2 class="text-xl font-semibold mb-4">Configura el Recordatorio</h2>
+    
+    <form id="reminderForm">
+      <div class="mb-4">
+        <label for="numero" class="block text-sm font-medium text-gray-700">Número de teléfono</label>
+        <input type="text" id="numero" name="numero" class="w-full p-2 border border-gray-300 rounded-md" placeholder="Ej. +51999999999" disabled>
+      </div>
+      <div class="mb-4">
+        <label for="mensaje" class="block text-sm font-medium text-gray-700">Mensaje</label>
+        <input type="text" id="mensaje" name="mensaje" class="w-full p-2 border border-gray-300 rounded-md" placeholder="Escribe tu mensaje" disabled>
+      </div>
+      <div class="mb-4">
+        <label for="tiempo" class="block text-sm font-medium text-gray-700">Intervalo (en minutos)</label>
+        <input type="number" id="tiempo" name="tiempo" class="w-full p-2 border border-gray-300 rounded-md" placeholder="Cada cuánto enviar el mensaje (en minutos)" disabled>
+      </div>
+
+      <!-- Botones de Editar y Guardar -->
+      <button type="button" id="editButton" class="w-full bg-yellow-500 text-white p-2 rounded-md mb-4">
+        Editar
+      </button>
+      <button type="submit" id="saveButton" class="w-full bg-blue-500 text-white p-2 rounded-md hidden">
+        Guardar
+      </button>
+    </form>
+  </div>
+
+  <script>
+    // Función para habilitar/deshabilitar los inputs
+    function toggleInputs(isEnabled) {
+      document.getElementById('numero').disabled = !isEnabled;
+      document.getElementById('mensaje').disabled = !isEnabled;
+      document.getElementById('tiempo').disabled = !isEnabled;
+    }
+
+    // Función para habilitar los botones
+    function toggleButtons() {
+      document.getElementById('editButton').classList.toggle('hidden');
+      document.getElementById('saveButton').classList.toggle('hidden');
+    }
+
+    // Al hacer clic en "Editar", habilitamos los inputs
+    document.getElementById('editButton').addEventListener('click', function() {
+      toggleInputs(true);  // Habilitar los inputs
+      toggleButtons();     // Cambiar a "Guardar"
+    });
+
+    // Al hacer clic en "Guardar", enviamos los datos al backend
+    document.getElementById('reminderForm').addEventListener('submit', function(event) {
+      event.preventDefault();
+
+      const numero = document.getElementById('numero').value;
+      const mensaje = document.getElementById('mensaje').value;
+      const tiempo = document.getElementById('tiempo').value;
+
+      if (!numero || !mensaje || !tiempo) {
+        alert('Por favor, llena todos los campos');
+        return;
+      }
+
+      // Enviar datos al backend para actualizar la configuración
+      fetch('/updateReminder', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ numero, mensaje, tiempo })
+      })
+      .then(response => response.text())  // Cambiar a response.text() para obtener el mensaje
+      .then(data => {
+        alert(data); // Mostrar el mensaje de éxito
+        toggleInputs(false);  // Deshabilitar los inputs
+        toggleButtons();      // Cambiar a "Editar"
+      })
+      .catch(error => {
+        console.error('Error al guardar los datos:', error);
+        alert('Hubo un error al guardar los datos');
+      });
+    });
+
+    // Función para obtener el estado cada cierto tiempo
+    function getStatus() {
+      fetch('/status')
+        .then(response => response.json())
+        .then(data => {
+          // Actualizar el estado
+          document.getElementById('status').textContent = data.status;
+          
+          // Si hay un QR, mostrarlo
+          if (data.qr) {
+            document.getElementById('qrCode').src = data.qr;
+          } else {
+            document.getElementById('qrContainer').style.display = 'none';
+          }
+        })
+        .catch(error => console.error('Error al obtener el estado:', error));
+    }
+
+    // Llamar a la función getStatus cada 3 segundos
+    setInterval(getStatus, 3000);
+  </script>
+
+</body>
+</html>
